@@ -7,6 +7,9 @@ from typing import Dict, Any
 
 import numpy as np
 from fastapi import FastAPI, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 # Set up standard Python logging directed to stdout at INFO level
@@ -74,6 +77,31 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+
+# Enable CORS for frontend integration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Mount static files directory if it exists
+static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "static"))
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+
+@app.get("/")
+async def serve_frontend():
+    """
+    Serve static index.html single-page frontend application.
+    """
+    index_file = os.path.join(static_dir, "index.html")
+    if os.path.exists(index_file):
+        return FileResponse(index_file)
+    return {"message": "Iris Classification API is running. Access /docs for API documentation."}
 
 
 class IrisInput(BaseModel):

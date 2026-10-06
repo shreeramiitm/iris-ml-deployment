@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Iris ML Studio — Interactive Inference Client</title>
+  
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#f5f3ff',
+              100: '#ede9fe',
+              500: '#8b5cf6',
+              600: '#7c3aed',
+              700: '#6d28d9',
+              900: '#1e1b4b',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(241, 245, 249, 0.5);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* Custom range slider styling */
+    input[type=range] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      width: 100%;
+    }
+    input[type=range]:focus {
+      outline: none;
+    }
+    input[type=range]::-webkit-slider-runnable-track {
+      height: 8px;
+      border-radius: 9999px;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 22px;
+      width: 22px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15), 0 0 0 2px rgba(255, 255, 255, 0.9);
+      cursor: pointer;
+      margin-top: -7px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+      box-shadow: 0 6px 14px rgba(124, 58, 237, 0.3), 0 0 0 3px rgba(124, 58, 237, 0.2);
+    }
+
+    /* Track dynamic background colors */
+    #sepal-length-slider::-webkit-slider-runnable-track { background: linear-gradient(to right, #10b981 var(--sl-pct, 50%), #e2e8f0 var(--sl-pct, 50%)); }
+    #sepal-width-slider::-webkit-slider-runnable-track { background: linear-gradient(to right, #f59e0b var(--sw-pct, 36%), #e2e8f0 var(--sw-pct, 36%)); }
+    #petal-length-slider::-webkit-slider-runnable-track { background: linear-gradient(to right, #ec4899 var(--pl-pct, 58%), #e2e8f0 var(--pl-pct, 58%)); }
+    #petal-width-slider::-webkit-slider-runnable-track { background: linear-gradient(to right, #8b5cf6 var(--pw-pct, 58%), #e2e8f0 var(--pw-pct, 58%)); }
+
+    /* Glassmorphism sidebar & cards */
+    .sidebar-bg {
+      background: linear-gradient(175deg, #1b143d 0%, #291b5c 40%, #1e1346 100%);
+    }
+    .card-glass {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px);
+    }
+    .dark .card-glass {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+    }
+  </style>
+</head>
+<body class="h-full bg-slate-100 dark:bg-slate-950 font-sans text-slate-800 dark:text-slate-100 antialiased transition-colors duration-200">
+  
+  <div class="flex h-screen overflow-hidden">
+    
+    <!-- LEFT SIDEBAR -->
+    <aside class="w-72 sidebar-bg flex-shrink-0 relative hidden lg:flex flex-col justify-between p-6 text-white overflow-hidden shadow-2xl z-20">
+      
+      <!-- Top Branding -->
+      <div>
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center text-purple-300 shadow-inner">
+            <!-- Iris Flower SVG -->
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2C9 5 4 8 4 12c0 4.418 3.582 8 8 8s8-3.582 8-8c0-4-5-7-8-10z" fill="rgba(168, 85, 247, 0.3)" />
+              <path d="M12 6c-2 2-5 4-5 6 0 2.2 1.8 4 4 4s4-1.8 4-4c0-2-3-4-3-6z" fill="rgba(236, 72, 153, 0.4)" />
+              <path d="M12 22v-6" stroke-linecap="round" />
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-xl font-bold tracking-tight text-white font-serif">Iris ML Studio</h1>
+          </div>
+        </div>
+        <p class="text-xs text-purple-200/70 font-medium pl-1 mb-8">FastAPI ML Inference for Iris Classification</p>
+
+        <!-- Navigation Links -->
+        <nav class="space-y-1.5">
+          <a href="#predict" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-600/80 to-indigo-600/80 text-white font-semibold text-sm shadow-lg shadow-purple-900/40 border border-purple-400/20 backdrop-blur-md">
+            <svg class="w-5 h-5 text-purple-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+            Predict
+          </a>
+          <a href="/docs" target="_blank" class="flex items-center gap-3 px-4 py-3 rounded-xl text-purple-200/80 hover:text-white hover:bg-white/5 transition-all text-sm font-medium">
+            <svg class="w-5 h-5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            API Docs
+          </a>
+          <a href="#model-info" onclick="openModelInfoModal()" class="flex items-center gap-3 px-4 py-3 rounded-xl text-purple-200/80 hover:text-white hover:bg-white/5 transition-all text-sm font-medium">
+            <svg class="w-5 h-5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            Model Info
+          </a>
+          <a href="#about" onclick="openAboutModal()" class="flex items-center gap-3 px-4 py-3 rounded-xl text-purple-200/80 hover:text-white hover:bg-white/5 transition-all text-sm font-medium">
+            <svg class="w-5 h-5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            About
+          </a>
+        </nav>
+      </div>
+
+      <!-- Decorative Flower Vector Graphic at Sidebar Bottom -->
+      <div class="relative z-10 my-4">
+        <!-- Quote Card -->
+        <div class="p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 shadow-xl text-xs text-purple-100 space-y-2">
+          <div class="text-purple-300 font-serif text-2xl leading-none">“</div>
+          <p class="font-medium italic leading-relaxed text-purple-100/90">Same data, Different insights</p>
+          <div class="flex items-center justify-between pt-1 text-[10px] text-purple-300/60 font-mono border-t border-white/10">
+            <span>KNN (K=5)</span>
+            <svg class="w-3.5 h-3.5 text-purple-400 opacity-80" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Background Flower Illustration Overlay -->
+      <div class="absolute -bottom-10 -left-10 w-72 h-80 opacity-20 pointer-events-none z-0">
+        <svg viewBox="0 0 200 240" fill="none" class="w-full h-full text-purple-300">
+          <path d="M50 200 C30 150, 20 100, 60 40 C100 80, 110 140, 50 200 Z" fill="currentColor"/>
+          <path d="M120 220 C100 170, 90 110, 140 60 C180 100, 170 170, 120 220 Z" fill="currentColor"/>
+          <path d="M80 240 L80 100" stroke="currentColor" stroke-width="4"/>
+        </svg>
+      </div>
+    </aside>
+
+    <!-- MAIN WORKSPACE CONTENT AREA -->
+    <main class="flex-1 flex flex-col h-screen overflow-y-auto bg-slate-50/60 dark:bg-slate-950">
+      
+      <!-- TOP HEADER & ENDPOINT BAR -->
+      <header class="p-6 pb-2 max-w-7xl w-full mx-auto space-y-4">
+        
+        <!-- Header Title Row -->
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="lg:hidden w-9 h-9 rounded-xl bg-purple-600 flex items-center justify-center text-white font-bold shadow-md">
+              🌸
+            </div>
+            <div>
+              <div class="flex items-center gap-3">
+                <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white font-serif">Iris ML Studio</h1>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700/50">Production API</span>
+              </div>
+              <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 font-medium">Interactive ML inference client for Iris Flower Classification</p>
+            </div>
+          </div>
+
+          <!-- Top Right Actions: API Ready & Theme Switcher -->
+          <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 text-xs font-semibold shadow-sm">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              API Ready
+            </div>
+            
+            <!-- Dark / Light Mode Toggle Button -->
+            <button id="theme-toggle" onclick="toggleTheme()" class="p-2 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all shadow-sm" title="Toggle Dark Mode">
+              <svg id="theme-icon-sun" class="w-4 h-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+              <svg id="theme-icon-moon" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Endpoint Configuration Bar -->
+        <div class="p-3 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-sm flex flex-wrap items-center justify-between gap-3">
+          <div class="flex flex-1 min-w-[280px] items-center gap-2">
+            <span class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+            </span>
+            <span class="text-xs font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">API ENDPOINT</span>
+            <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 border border-purple-200 dark:border-purple-800">POST</span>
+            
+            <input type="text" id="api-base-url" value="" class="flex-1 px-3 py-1.5 text-xs font-mono bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="http://127.0.0.1:8000" />
+            
+            <button onclick="copyEndpointUrl()" class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all" title="Copy Endpoint URL">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            </button>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <button onclick="checkHealth()" class="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-slate-700 dark:text-slate-200 hover:text-purple-600 dark:hover:text-purple-300 text-xs font-semibold transition-all border border-slate-200 dark:border-slate-700 flex items-center gap-2">
+              <span id="health-dot" class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              Check Health &rsaquo;
+            </button>
+            
+            <div id="latency-badge" class="px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/50 text-amber-700 dark:text-amber-300 text-xs font-mono font-medium flex items-center gap-1.5">
+              <span>⚡</span>
+              <span id="latency-text">Latency: -- ms</span>
+            </div>
+          </div>
+        </div>
+
+      </header>
+
+      <!-- MAIN DASHBOARD CONTENT GRID -->
+      <div class="p-6 pt-2 max-w-7xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1">
+        
+        <!-- LEFT COLUMN: Presets & Feature Sliders (Cols 7) -->
+        <div class="lg:col-span-7 space-y-6">
+          
+          <!-- QUICK SPECIES PRESETS CARD -->
+          <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-emerald-500">🌱</span>
+                <h2 class="text-base font-bold text-slate-900 dark:text-white">Quick Species Presets</h2>
+              </div>
+              <span class="text-xs text-slate-400 font-medium">Load typical measurements &rsaquo;</span>
+            </div>
+
+            <!-- Presets 3 Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              
+              <!-- Setosa Preset Card -->
+              <button onclick="applyPreset(5.0, 3.5, 1.4, 0.2)" class="group relative text-left p-3.5 rounded-2xl bg-gradient-to-b from-purple-50/60 to-purple-100/40 dark:from-purple-950/30 dark:to-purple-900/20 border border-purple-200/60 dark:border-purple-800/40 hover:border-purple-400 hover:shadow-md transition-all">
+                <span class="absolute top-3 right-3 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-purple-200/80 dark:bg-purple-900/80 text-purple-700 dark:text-purple-300">Class 0</span>
+                <!-- Flower SVG -->
+                <div class="w-12 h-12 mb-2 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform">
+                  <svg viewBox="0 0 64 64" fill="currentColor">
+                    <circle cx="32" cy="32" r="8" fill="#fbbf24"/>
+                    <path d="M32 10 C26 20, 24 24, 32 24 C40 24, 38 20, 32 10 Z" fill="#a855f7" opacity="0.9"/>
+                    <path d="M32 54 C26 44, 24 40, 32 40 C40 40, 38 44, 32 54 Z" fill="#a855f7" opacity="0.9"/>
+                    <path d="M10 32 C20 26, 24 24, 24 32 C24 40, 20 38, 10 32 Z" fill="#c084fc" opacity="0.8"/>
+                    <path d="M54 32 C44 26, 40 24, 40 32 C40 40, 44 38, 54 32 Z" fill="#c084fc" opacity="0.8"/>
+                  </svg>
+                </div>
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white">Setosa</h3>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Short & wide petals</p>
+              </button>
+
+              <!-- Versicolor Preset Card -->
+              <button onclick="applyPreset(5.9, 2.8, 4.3, 1.3)" class="group relative text-left p-3.5 rounded-2xl bg-gradient-to-b from-blue-50/60 to-blue-100/40 dark:from-blue-950/30 dark:to-blue-900/20 border border-blue-200/60 dark:border-blue-800/40 hover:border-blue-400 hover:shadow-md transition-all">
+                <span class="absolute top-3 right-3 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-blue-200/80 dark:bg-blue-900/80 text-blue-700 dark:text-blue-300">Class 1</span>
+                <!-- Flower SVG -->
+                <div class="w-12 h-12 mb-2 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+                  <svg viewBox="0 0 64 64" fill="currentColor">
+                    <circle cx="32" cy="32" r="9" fill="#f59e0b"/>
+                    <path d="M32 6 C24 18, 22 24, 32 24 C42 24, 40 18, 32 6 Z" fill="#3b82f6"/>
+                    <path d="M32 58 C24 46, 22 40, 32 40 C42 40, 40 46, 32 58 Z" fill="#3b82f6"/>
+                    <path d="M6 32 C18 24, 24 22, 24 32 C24 42, 18 40, 6 32 Z" fill="#60a5fa"/>
+                    <path d="M58 32 C46 24, 40 22, 40 32 C40 42, 46 40, 58 32 Z" fill="#60a5fa"/>
+                  </svg>
+                </div>
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white">Versicolor</h3>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Medium proportions</p>
+              </button>
+
+              <!-- Virginica Preset Card -->
+              <button onclick="applyPreset(6.5, 3.0, 5.5, 2.0)" class="group relative text-left p-3.5 rounded-2xl bg-gradient-to-b from-pink-50/60 to-pink-100/40 dark:from-pink-950/30 dark:to-pink-900/20 border border-pink-200/60 dark:border-pink-800/40 hover:border-pink-400 hover:shadow-md transition-all">
+                <span class="absolute top-3 right-3 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-pink-200/80 dark:bg-pink-900/80 text-pink-700 dark:text-pink-300">Class 2</span>
+                <!-- Flower SVG -->
+                <div class="w-12 h-12 mb-2 text-pink-600 dark:text-pink-400 group-hover:scale-110 transition-transform">
+                  <svg viewBox="0 0 64 64" fill="currentColor">
+                    <circle cx="32" cy="32" r="10" fill="#f59e0b"/>
+                    <path d="M32 4 C22 18, 20 24, 32 24 C44 24, 42 18, 32 4 Z" fill="#ec4899"/>
+                    <path d="M32 60 C22 46, 20 40, 32 40 C44 40, 42 46, 32 60 Z" fill="#ec4899"/>
+                    <path d="M4 32 C18 22, 24 20, 24 32 C24 44, 18 42, 4 32 Z" fill="#f472b6"/>
+                    <path d="M60 32 C46 22, 40 20, 40 32 C40 44, 46 42, 60 32 Z" fill="#f472b6"/>
+                  </svg>
+                </div>
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white">Virginica</h3>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Long & robust petals</p>
+              </button>
+
+            </div>
+          </div>
+
+          <!-- INPUT FLOWER FEATURES CARD -->
+          <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-sm space-y-6">
+            
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="text-purple-600 dark:text-purple-400">⚙️</span>
+                  <h2 class="text-base font-bold text-slate-900 dark:text-white">Input Flower Features</h2>
+                </div>
+                <p class="text-xs text-slate-400 mt-0.5 font-medium">Adjust the sliders or enter values manually (in centimeters)</p>
+              </div>
+
+              <!-- Auto Predict Toggle -->
+              <label class="flex items-center gap-2.5 cursor-pointer">
+                <span class="text-xs font-semibold text-slate-600 dark:text-slate-300">Auto-predict</span>
+                <input type="checkbox" id="auto-predict-toggle" checked onchange="toggleAutoPredict()" class="sr-only peer" />
+                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600 relative"></div>
+              </label>
+            </div>
+
+            <!-- 4 SLIDER CONTROLS -->
+            <div class="space-y-5">
+              
+              <!-- 1. Sepal Length -->
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+                    <label class="text-sm font-bold text-slate-800 dark:text-slate-200">Sepal Length</label>
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    <input type="number" id="sepal-length-num" value="6.0" step="0.1" min="4.0" max="8.0" oninput="syncFromNum('sepal-length')" class="w-16 px-2 py-1 text-sm font-mono font-bold text-center bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none" />
+                    <span class="text-xs font-semibold text-slate-400">cm</span>
+                  </div>
+                </div>
+                <input type="range" id="sepal-length-slider" value="6.0" min="4.0" max="8.0" step="0.1" oninput="syncFromSlider('sepal-length')" />
+                <div class="flex justify-between text-[11px] font-mono text-slate-400 font-medium">
+                  <span>4.0 cm</span>
+                  <span>8.0 cm</span>
+                </div>
+              </div>
+
+              <!-- 2. Sepal Width -->
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+                    <label class="text-sm font-bold text-slate-800 dark:text-slate-200">Sepal Width</label>
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    <input type="number" id="sepal-width-num" value="2.9" step="0.1" min="2.0" max="4.5" oninput="syncFromNum('sepal-width')" class="w-16 px-2 py-1 text-sm font-mono font-bold text-center bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:outline-none" />
+                    <span class="text-xs font-semibold text-slate-400">cm</span>
+                  </div>
+                </div>
+                <input type="range" id="sepal-width-slider" value="2.9" min="2.0" max="4.5" step="0.1" oninput="syncFromSlider('sepal-width')" />
+                <div class="flex justify-between text-[11px] font-mono text-slate-400 font-medium">
+                  <span>2.0 cm</span>
+                  <span>4.5 cm</span>
+                </div>
+              </div>
+
+              <!-- 3. Petal Length -->
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-pink-500"></span>
+                    <label class="text-sm font-bold text-slate-800 dark:text-slate-200">Petal Length</label>
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    <input type="number" id="petal-length-num" value="4.5" step="0.1" min="1.0" max="7.0" oninput="syncFromNum('petal-length')" class="w-16 px-2 py-1 text-sm font-mono font-bold text-center bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-pink-500 focus:outline-none" />
+                    <span class="text-xs font-semibold text-slate-400">cm</span>
+                  </div>
+                </div>
+                <input type="range" id="petal-length-slider" value="4.5" min="1.0" max="7.0" step="0.1" oninput="syncFromSlider('petal-length')" />
+                <div class="flex justify-between text-[11px] font-mono text-slate-400 font-medium">
+                  <span>1.0 cm</span>
+                  <span>7.0 cm</span>
+                </div>
+              </div>
+
+              <!-- 4. Petal Width -->
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-purple-500"></span>
+                    <label class="text-sm font-bold text-slate-800 dark:text-slate-200">Petal Width</label>
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    <input type="number" id="petal-width-num" value="1.5" step="0.1" min="0.1" max="2.5" oninput="syncFromNum('petal-width')" class="w-16 px-2 py-1 text-sm font-mono font-bold text-center bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-purple-500 focus:outline-none" />
+                    <span class="text-xs font-semibold text-slate-400">cm</span>
+                  </div>
+                </div>
+                <input type="range" id="petal-width-slider" value="1.5" min="0.1" max="2.5" step="0.1" oninput="syncFromSlider('petal-width')" />
+                <div class="flex justify-between text-[11px] font-mono text-slate-400 font-medium">
+                  <span>0.1 cm</span>
+                  <span>2.5 cm</span>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Run Model Prediction Button -->
+            <button id="predict-btn" onclick="executePrediction()" class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-500 hover:from-purple-500 hover:via-indigo-500 hover:to-blue-400 text-white font-bold text-sm tracking-wide shadow-lg shadow-purple-600/30 hover:shadow-purple-600/50 transition-all flex items-center justify-center gap-3 group">
+              <!-- Send Icon -->
+              <svg class="w-5 h-5 text-purple-200 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+              <span>Run Model Prediction</span>
+              <svg class="w-4 h-4 opacity-70 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </button>
+
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: Result Card, Radar Visualization & API Response JSON (Cols 5) -->
+        <div class="lg:col-span-5 space-y-6">
+          
+          <!-- PREDICTION RESULT CARD (Night Sky Metallic Theme) -->
+          <div id="result-card" class="relative p-6 rounded-3xl bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-white border border-indigo-500/20 shadow-xl overflow-hidden min-h-[220px] flex flex-col justify-between">
+            
+            <!-- Background Floral Art -->
+            <div class="absolute top-0 right-0 w-48 h-48 opacity-30 pointer-events-none z-0">
+              <svg viewBox="0 0 100 100" fill="none" class="w-full h-full text-indigo-400">
+                <path d="M50 10 C30 30, 20 60, 50 90 C80 60, 70 30, 50 10 Z" fill="currentColor"/>
+                <circle cx="50" cy="50" r="15" fill="#f59e0b" opacity="0.8"/>
+              </svg>
+            </div>
+
+            <!-- Top Header -->
+            <div class="relative z-10 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-amber-400 text-sm">✦</span>
+                <span class="text-xs font-semibold text-indigo-200 tracking-wide uppercase">Prediction Result</span>
+              </div>
+              <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[11px] font-semibold">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                Live Prediction
+              </div>
+            </div>
+
+            <!-- Species Name & Class ID -->
+            <div class="relative z-10 my-4 space-y-2">
+              <div class="flex items-baseline gap-3">
+                <h3 id="result-species" class="text-3xl sm:text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-300 via-indigo-200 to-purple-200 font-serif">
+                  Versicolor
+                </h3>
+              </div>
+              <span id="result-class-badge" class="inline-block px-3 py-1 rounded-lg text-xs font-mono font-bold bg-indigo-500/30 border border-indigo-400/30 text-indigo-200">
+                Class ID: 1
+              </span>
+            </div>
+
+            <!-- Petal Ratio / Meter -->
+            <div class="relative z-10 space-y-3">
+              <div class="flex items-center justify-between text-xs text-indigo-200/80 font-medium">
+                <span>Petal Ratio (L/W)</span>
+                <span id="petal-ratio-val" class="font-mono font-bold text-amber-300">3.0x</span>
+              </div>
+              <div class="w-full h-2 rounded-full bg-slate-800/80 overflow-hidden border border-white/10">
+                <div id="ratio-meter-bar" class="h-full rounded-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500" style="width: 60%"></div>
+              </div>
+              
+              <div class="p-3 rounded-xl bg-white/5 border border-white/10 text-xs text-indigo-100/90 leading-relaxed font-sans backdrop-blur-sm">
+                <p id="species-description">
+                  Iris Versicolor represents intermediate dimensions. Often found in wetland borders with balanced petal/sepal ratios.
+                </p>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- FEATURE VISUALIZATION (RADAR / BAR CHART) -->
+          <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-sm space-y-4">
+            
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-indigo-500">📊</span>
+                <h2 class="text-sm font-bold text-slate-900 dark:text-white">Feature Visualization</h2>
+              </div>
+
+              <!-- View Switcher Tabs -->
+              <div class="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold">
+                <button id="tab-radar" onclick="switchChartType('radar')" class="px-3 py-1 rounded-lg bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-300 shadow-sm transition-all">Radar View</button>
+                <button id="tab-bar" onclick="switchChartType('bar')" class="px-3 py-1 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">Bar View</button>
+              </div>
+            </div>
+
+            <!-- Canvas Container -->
+            <div class="relative w-full h-56 flex items-center justify-center">
+              <canvas id="iris-chart"></canvas>
+            </div>
+          </div>
+
+          <!-- API RESPONSE JSON -->
+          <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-purple-500 font-mono">{ }</span>
+                <h2 class="text-sm font-bold text-slate-900 dark:text-white">API Response (JSON)</h2>
+              </div>
+
+              <button onclick="copyJsonResponse()" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-slate-600 dark:text-slate-300 text-xs font-semibold transition-all border border-slate-200 dark:border-slate-700 flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                <span id="copy-btn-text">Copy</span>
+              </button>
+            </div>
+
+            <!-- Code Container -->
+            <div class="p-4 rounded-2xl bg-slate-950 text-emerald-400 font-mono text-xs overflow-x-auto border border-slate-800 shadow-inner">
+              <pre id="json-response-code">{\n  "predicted_class": 1,\n  "species": "versicolor"\n}</pre>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+
+  <!-- MODAL: MODEL INFO -->
+  <div id="modal-model-info" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">Model Specifications</h3>
+        <button onclick="closeModal('modal-model-info')" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      </div>
+      <div class="space-y-2 text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-sans">
+        <p><strong>Classifier:</strong> KNeighborsClassifier (n_neighbors = 5)</p>
+        <p><strong>Input Order:</strong> Sepal Length, Sepal Width, Petal Length, Petal Width (cm)</p>
+        <p><strong>Preprocessing:</strong> None (Raw continuous float features)</p>
+        <p><strong>Target Classes:</strong> 0 = Setosa, 1 = Versicolor, 2 = Virginica</p>
+      </div>
+      <button onclick="closeModal('modal-model-info')" class="w-full py-2.5 rounded-xl bg-purple-600 text-white text-xs font-bold">Close</button>
+    </div>
+  </div>
+
+  <!-- MODAL: ABOUT -->
+  <div id="modal-about" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">About Iris ML Studio</h3>
+        <button onclick="closeModal('modal-about')" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      </div>
+      <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+        Iris ML Studio is an interactive production client designed for machine learning inference using FastAPI and Scikit-Learn.
+      </p>
+      <button onclick="closeModal('modal-about')" class="w-full py-2.5 rounded-xl bg-purple-600 text-white text-xs font-bold">Close</button>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT APPLICATION LOGIC -->
+  <script>
+    // Species benchmarks (averages across Fisher's Iris Dataset)
+    const SPECIES_AVERAGES = {
+      setosa: [5.01, 3.43, 1.46, 0.25],
+      versicolor: [5.94, 2.77, 4.26, 1.33],
+      virginica: [6.59, 2.97, 5.55, 2.03]
+    };
+
+    const SPECIES_DESCRIPTIONS = {
+      setosa: "Iris Setosa is characterized by distinctively small, narrow petals and wide sepals. Native to cold maritime climates.",
+      versicolor: "Iris Versicolor represents intermediate dimensions. Often found in wetland borders with balanced petal/sepal ratios.",
+      virginica: "Iris Virginica features large, robust petals and long sepals. Prevalent in swampy coastal wetlands."
+    };
+
+    let chartInstance = null;
+    let chartType = 'radar';
+    let autoPredict = true;
+    let debounceTimer = null;
+
+    // Initialize Page
+    document.addEventListener('DOMContentLoaded', () => {
+      // Set default API base URL
+      const currentHost = window.location.origin;
+      const apiInput = document.getElementById('api-base-url');
+      if (currentHost && !currentHost.startsWith('file:')) {
+        apiInput.value = currentHost;
+      } else {
+        apiInput.value = 'http://127.0.0.1:8000';
+      }
+
+      // Initial slider color track fill
+      updateSliderTracks();
+
+      // Check health on load
+      checkHealth();
+
+      // Initialize Chart
+      initChart();
+
+      // Run initial prediction
+      executePrediction();
+    });
+
+    function getFeatureValues() {
+      return {
+        sepal_length: parseFloat(document.getElementById('sepal-length-num').value) || 5.1,
+        sepal_width: parseFloat(document.getElementById('sepal-width-num').value) || 3.5,
+        petal_length: parseFloat(document.getElementById('petal-length-num').value) || 1.4,
+        petal_width: parseFloat(document.getElementById('petal-width-num').value) || 0.2
+      };
+    }
+
+    function syncFromSlider(featureKey) {
+      const slider = document.getElementById(`${featureKey}-slider`);
+      const numInput = document.getElementById(`${featureKey}-num`);
+      numInput.value = slider.value;
+      updateSliderTracks();
+
+      if (autoPredict) {
+        debouncedPredict();
+      }
+    }
+
+    function syncFromNum(featureKey) {
+      const slider = document.getElementById(`${featureKey}-slider`);
+      const numInput = document.getElementById(`${featureKey}-num`);
+      slider.value = numInput.value;
+      updateSliderTracks();
+
+      if (autoPredict) {
+        debouncedPredict();
+      }
+    }
+
+    function updateSliderTracks() {
+      const sl = document.getElementById('sepal-length-slider');
+      const sw = document.getElementById('sepal-width-slider');
+      const pl = document.getElementById('petal-length-slider');
+      const pw = document.getElementById('petal-width-slider');
+
+      const slPct = ((sl.value - sl.min) / (sl.max - sl.min)) * 100;
+      const swPct = ((sw.value - sw.min) / (sw.max - sw.min)) * 100;
+      const plPct = ((pl.value - pl.min) / (pl.max - pl.min)) * 100;
+      const pwPct = ((pw.value - pw.min) / (pw.max - pw.min)) * 100;
+
+      sl.style.setProperty('--sl-pct', `${slPct}%`);
+      sw.style.setProperty('--sw-pct', `${swPct}%`);
+      pl.style.setProperty('--pl-pct', `${plPct}%`);
+      pw.style.setProperty('--pw-pct', `${pwPct}%`);
+    }
+
+    function applyPreset(sl, sw, pl, pw) {
+      document.getElementById('sepal-length-num').value = sl;
+      document.getElementById('sepal-length-slider').value = sl;
+
+      document.getElementById('sepal-width-num').value = sw;
+      document.getElementById('sepal-width-slider').value = sw;
+
+      document.getElementById('petal-length-num').value = pl;
+      document.getElementById('petal-length-slider').value = pl;
+
+      document.getElementById('petal-width-num').value = pw;
+      document.getElementById('petal-width-slider').value = pw;
+
+      updateSliderTracks();
+      executePrediction();
+    }
+
+    function toggleAutoPredict() {
+      autoPredict = document.getElementById('auto-predict-toggle').checked;
+    }
+
+    function debouncedPredict() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        executePrediction();
+      }, 150);
+    }
+
+    async function checkHealth() {
+      const baseUrl = document.getElementById('api-base-url').value.replace(/\/$/, '');
+      const healthDot = document.getElementById('health-dot');
+      const latencyText = document.getElementById('latency-text');
+      
+      const startTime = performance.now();
+      try {
+        const response = await fetch(`${baseUrl}/health`);
+        const endTime = performance.now();
+        const duration = Math.round(endTime - startTime);
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.model_loaded) {
+            healthDot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+          } else {
+            healthDot.className = 'w-2 h-2 rounded-full bg-amber-500';
+          }
+          latencyText.innerText = `Latency: ${duration} ms`;
+        } else {
+          healthDot.className = 'w-2 h-2 rounded-full bg-red-500';
+          latencyText.innerText = 'Health: Error';
+        }
+      } catch (err) {
+        healthDot.className = 'w-2 h-2 rounded-full bg-red-500';
+        latencyText.innerText = 'Health: Offline';
+      }
+    }
+
+    async function executePrediction() {
+      const baseUrl = document.getElementById('api-base-url').value.replace(/\/$/, '');
+      const payload = getFeatureValues();
+      const codeBlock = document.getElementById('json-response-code');
+
+      const startTime = performance.now();
+      try {
+        const res = await fetch(`${baseUrl}/predict`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const endTime = performance.now();
+        const duration = Math.round(endTime - startTime);
+        document.getElementById('latency-text').innerText = `Latency: ${duration} ms`;
+
+        if (!res.ok) {
+          const errData = await res.json();
+          codeBlock.innerText = JSON.stringify(errData, null, 2);
+          return;
+        }
+
+        const data = await res.json();
+        codeBlock.innerText = JSON.stringify(data, null, 2);
+
+        // Update UI Result Card
+        updateResultUI(data.predicted_class, data.species, payload);
+
+      } catch (err) {
+        codeBlock.innerText = JSON.stringify({ error: err.message, note: "Check backend server status" }, null, 2);
+      }
+    }
+
+    function updateResultUI(classId, speciesName, payload) {
+      const speciesTitle = document.getElementById('result-species');
+      const classBadge = document.getElementById('result-class-badge');
+      const ratioVal = document.getElementById('petal-ratio-val');
+      const ratioBar = document.getElementById('ratio-meter-bar');
+      const desc = document.getElementById('species-description');
+
+      // Capitalize species name
+      const formattedSpecies = speciesName.charAt(0).toUpperCase() + speciesName.slice(1);
+      speciesTitle.innerText = formattedSpecies;
+      classBadge.innerText = `Class ID: ${classId}`;
+
+      // Petal length to width ratio
+      const ratio = (payload.petal_length / (payload.petal_width || 0.1)).toFixed(1);
+      ratioVal.innerText = `${ratio}x`;
+
+      const ratioPct = Math.min(100, Math.max(10, (ratio / 7.0) * 100));
+      ratioBar.style.width = `${ratioPct}%`;
+
+      desc.innerText = SPECIES_DESCRIPTIONS[speciesName.toLowerCase()] || "Classification prediction complete.";
+
+      // Update Chart
+      updateChart(speciesName.toLowerCase(), payload);
+    }
+
+    // Chart.js Visualization Logic
+    function initChart() {
+      const ctx = document.getElementById('iris-chart').getContext('2d');
+      const isDark = document.documentElement.classList.contains('dark');
+      const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)';
+      const textColor = isDark ? '#cbd5e1' : '#64748b';
+
+      chartInstance = new Chart(ctx, {
+        type: chartType,
+        data: {
+          labels: ['Sepal Length', 'Sepal Width', 'Petal Length', 'Petal Width'],
+          datasets: [
+            {
+              label: 'Input Flower',
+              data: [6.0, 2.9, 4.5, 1.5],
+              backgroundColor: 'rgba(139, 92, 246, 0.3)',
+              borderColor: '#8b5cf6',
+              borderWidth: 2,
+              pointBackgroundColor: '#8b5cf6'
+            },
+            {
+              label: 'Class Average',
+              data: SPECIES_AVERAGES.versicolor,
+              backgroundColor: 'rgba(59, 130, 246, 0.15)',
+              borderColor: '#3b82f6',
+              borderWidth: 1.5,
+              borderDash: [4, 4],
+              pointBackgroundColor: '#3b82f6'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                boxWidth: 12,
+                font: { family: 'Plus Jakarta Sans', size: 11 },
+                color: textColor
+              }
+            }
+          },
+          scales: chartType === 'radar' ? {
+            r: {
+              grid: { color: gridColor },
+              ticks: { display: false },
+              pointLabels: {
+                font: { family: 'Plus Jakarta Sans', size: 10, weight: '600' },
+                color: textColor
+              }
+            }
+          } : {
+            y: {
+              beginAtZero: true,
+              grid: { color: gridColor },
+              ticks: { color: textColor, font: { family: 'JetBrains Mono', size: 10 } }
+            },
+            x: {
+              grid: { display: false },
+              ticks: { color: textColor, font: { family: 'Plus Jakarta Sans', size: 10 } }
+            }
+          }
+        }
+      });
+    }
+
+    function updateChart(speciesKey, payload) {
+      if (!chartInstance) return;
+
+      const inputData = [payload.sepal_length, payload.sepal_width, payload.petal_length, payload.petal_width];
+      const benchmarkData = SPECIES_AVERAGES[speciesKey] || SPECIES_AVERAGES.versicolor;
+
+      chartInstance.data.datasets[0].data = inputData;
+      chartInstance.data.datasets[1].data = benchmarkData;
+      chartInstance.data.datasets[1].label = `Class Average (${speciesKey.charAt(0).toUpperCase() + speciesKey.slice(1)})`;
+      chartInstance.update();
+    }
+
+    function switchChartType(type) {
+      if (chartType === type) return;
+      chartType = type;
+
+      document.getElementById('tab-radar').className = type === 'radar' 
+        ? 'px-3 py-1 rounded-lg bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-300 shadow-sm transition-all'
+        : 'px-3 py-1 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all';
+
+      document.getElementById('tab-bar').className = type === 'bar' 
+        ? 'px-3 py-1 rounded-lg bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-300 shadow-sm transition-all'
+        : 'px-3 py-1 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all';
+
+      if (chartInstance) {
+        chartInstance.destroy();
+        initChart();
+        executePrediction();
+      }
+    }
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      const isDark = html.classList.toggle('dark');
+      document.getElementById('theme-icon-sun').classList.toggle('hidden', !isDark);
+      document.getElementById('theme-icon-moon').classList.toggle('hidden', isDark);
+
+      if (chartInstance) {
+        chartInstance.destroy();
+        initChart();
+        executePrediction();
+      }
+    }
+
+    function copyEndpointUrl() {
+      const urlInput = document.getElementById('api-base-url');
+      navigator.clipboard.writeText(urlInput.value);
+    }
+
+    function copyJsonResponse() {
+      const code = document.getElementById('json-response-code').innerText;
+      navigator.clipboard.writeText(code);
+
+      const btnText = document.getElementById('copy-btn-text');
+      btnText.innerText = 'Copied!';
+      setTimeout(() => {
+        btnText.innerText = 'Copy';
+      }, 2000);
+    }
+
+    function openModelInfoModal() {
+      document.getElementById('modal-model-info').style.display = 'flex';
+    }
+
+    function openAboutModal() {
+      document.getElementById('modal-about').style.display = 'flex';
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+  </script>
+</body>
+</html>

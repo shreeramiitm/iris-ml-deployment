@@ -6,9 +6,11 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application logic and model artifact
+# Copy application logic, model artifact, and static web client
 COPY app/ ./app/
 COPY model/ ./model/
+COPY static/ ./static/
+COPY index.html ./index.html
 
 # Expose port 8000
 EXPOSE 8000
